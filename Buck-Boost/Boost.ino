@@ -9,19 +9,31 @@ void setup(){
     pinMode(13, OUTPUT);
     delay(1000);
     io.connect();
-    while((io.status() < AIO_CONNECTED){
+    while((io.status() < AIO_CONNECTED)){
         Serial.println(io.statusText());
         delay(500);
     }
 }
 
-void loop(){
-    io.run();
+void boost(){
     delay(500);
     LED_STATE = abs(LED_STATE - 1);
+}
+
+void wifi(){
+    for(int i = 0; i < 5; i++){
+        Serial.println(LED_STATE);
+        batPercent->save(LED_STATE);
+        delay(2000);
+    }
+}
+
+void loop(){
+    io.run();
+    boost();
+    wifi();
     digitalWrite(13, LED_STATE);
-    delay(2000);
-    batPercent->save(LED_STATE);
+    delay(5000);
 }
 
 /*
