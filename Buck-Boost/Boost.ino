@@ -16,8 +16,11 @@ void setup(){
 }
 
 void boost(){
-    delay(500);
     LED_STATE = abs(LED_STATE - 1);
+    //  servo.display()
+    digitalWrite(13, LED_STATE);
+    delay(500);
+    wifi();
 }
 
 void wifi(){
@@ -25,15 +28,14 @@ void wifi(){
         Serial.println(LED_STATE);
         batPercent->save(LED_STATE);
         delay(2000);
+    Serial.println("Cycle success");
     }
 }
 
 void loop(){
     io.run();
     boost();
-    wifi();
-    digitalWrite(13, LED_STATE);
-    delay(5000);
+    Serial.println("Going to sleep");
 }
 
 /*
