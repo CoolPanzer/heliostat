@@ -1,41 +1,75 @@
 #include "config.h"
 
+#include <Adafruit_PWMServoDriver.h>
+
+#define uS_TO_S_FACTOR 1000000ULL
+#define TIME_TO_SLEEP  10   
+
 int LED_STATE = 0;
 
-AdafruitIO_Feed *batPercent = io.feed("batPercent");
+AdafruitIO_Feed *batPercent = io.feed("batPercent");     
+
+RTC_DATA_ATTR int bootCount = 0;
+
+void print_wakeup_reason(){
+  esp_sleep_wakeup_cause_t wakeup_reason;
+
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch(wakeup_reason)
+  {
+    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+  }
+}
 
 void setup(){
     Serial.begin(115200);
-    pinMode(13, OUTPUT);
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
     delay(1000);
+    print_wakeup_reason();
+    boost();
+    wifi();
+    }
+
+void boost(){
+    digitalWrite(LED_BUILTIN, 1);//turn booster on
+    //  servo.display()
+    delay(2000);
+    digitalWrite(LED_BUILTIN, 0);//turn booster on
+    delay(500);
+}
+
+void wifi(){
+    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
     io.connect();
     while((io.status() < AIO_CONNECTED)){
         Serial.println(io.statusText());
         delay(500);
-    }
-}
-
-void boost(){
-    LED_STATE = abs(LED_STATE - 1);
-    //  servo.display()
-    digitalWrite(13, LED_STATE);
+    }   
+    io.run();
     delay(500);
-    wifi();
+    for(int i = 0; i < 5; i++){
+        Serial.println(i);
+        batPercent->save(i);
+        delay(2000);
+    }
+    Serial.println("Cycle success");
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
+    Serial.println("Going to sleep now");
+    Serial.flush(); 
+    esp_deep_sleep_start();
 }
 
-void wifi(){
-    for(int i = 0; i < 5; i++){
-        Serial.println(LED_STATE);
-        batPercent->save(LED_STATE);
-        delay(2000);
-    Serial.println("Cycle success");
-    }
-}
 
 void loop(){
-    io.run();
-    boost();
-    Serial.println("Going to sleep");
 }
 
 /*
