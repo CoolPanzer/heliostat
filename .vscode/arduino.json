@@ -1,6 +1,6 @@
 {
-    "configuration": "FlashFreq=80,UploadSpeed=921600,DebugLevel=none,PartitionScheme=default",
-    "board": "esp32:esp32:featheresp32",
-    "port": "/dev/tty.SLAB_USBtoUART",
-    "sketch": "Buck-Boost/Boost.ino"
+    "configuration": "CDCOnBoot=cdc,MSCOnBoot=default,DFUOnBoot=default,UploadMode=cdc,PSRAM=enabled,PartitionScheme=tinyuf2,CPUFreq=240,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,DebugLevel=none",
+    "board": "esp32:esp32:adafruit_feather_esp32s2",
+    "port": "/dev/tty.usbserial-01D1CEFC",
+    "sketch": "heliostat/heliostat.ino"
 }

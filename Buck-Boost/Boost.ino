@@ -1,13 +1,21 @@
 #include "config.h"
+#include <Adafruit_PWMServoDriver.h>
 
 #include <Adafruit_PWMServoDriver.h>
 
 #define uS_TO_S_FACTOR 1000000ULL
 #define TIME_TO_SLEEP  10   
 
-int LED_STATE = 0;
+#define SERVOMIN  200 // This is the 'minimum' pulse length count (out of 4096)
+#define SERVOMAX  264 // This is the 'maximum' pulse length count (out of 4096)
+#define USMIN  600 // This is the rounded 'minimum' microsecond length based on the minimum pulse of 150
+#define USMAX  2400 // This is the rounded 'maximum' microsecond length based on the maximum pulse of 600
+#define SERVO_FREQ 50 // Analog servos run at ~50 Hz updates
+
+uint8_t servonum = 4;
 
 AdafruitIO_Feed *batPercent = io.feed("batPercent");     
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
 
 RTC_DATA_ATTR int bootCount = 0;
 
@@ -34,36 +42,56 @@ void setup(){
     delay(1000);
     print_wakeup_reason();
     boost();
-    wifi();
+    //wifi();
     }
 
 void boost(){
-    digitalWrite(LED_BUILTIN, 1);//turn booster on
+    Serial.println("Starting pwm");
+    digitalWrite(LED_BUILTIN, HIGH);//turn booster on
     //  servo.display()
     delay(2000);
-    digitalWrite(LED_BUILTIN, 0);//turn booster on
-    delay(500);
+    pwm.begin();
+    pwm.setOscillatorFrequency(27000000);
+    pwm.setPWMFreq(SERVO_FREQ);
+    delay(2000);
+    for (uint16_t pulselen = SERVOMIN; pulselen < SERVOMAX; pulselen++) {
+        pwm.setPWM(servonum, 0, pulselen);
+        Serial.println(pulselen);
+    }
+
+    delay(1000);
+    for (uint16_t pulselen = SERVOMAX; pulselen > SERVOMIN; pulselen--) {
+        pwm.setPWM(servonum, 0, pulselen);
+        Serial.println(pulselen);
+    }
+    digitalWrite(LED_BUILTIN, LOW);//turn booster on
+    delay(1000);
 }
 
 void wifi(){
     esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
     io.connect();
-    while((io.status() < AIO_CONNECTED)){
+    int wifiTry = 0;
+    while((io.status() < AIO_CONNECTED) && wifiTry < 10){
         Serial.println(io.statusText());
+        wifiTry++;
         delay(500);
     }   
-    io.run();
-    delay(500);
-    for(int i = 0; i < 5; i++){
-        Serial.println(i);
-        batPercent->save(i);
-        delay(2000);
+    if(wifiTry >= 10){
+        Serial.println("Cycle failed");
     }
-    Serial.println("Cycle success");
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(500);
-    digitalWrite(LED_BUILTIN, LOW);
+    else{
+        io.run();
+        delay(500);
+        for(int i = 0; i < 5; i++){
+            Serial.println(i);
+            batPercent->save(i);
+            delay(2000);
+        }
+        Serial.println("Cycle success");
+    }
     Serial.println("Going to sleep now");
+    delay(500);
     Serial.flush(); 
     esp_deep_sleep_start();
 }
